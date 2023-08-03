@@ -210,17 +210,18 @@ ci:
         - "--disable-setuid-sandbox"
         - "--disable-dev-shm-usage"
         - "--disable-gpu"
-  upload:
-    target: temporary-public-storage
+ upload:
+    target: filesystem
+    outputDir: ./reports
   assert:
     assertions:
       "categories:performance":
         - error
-        - minScore: $min_score_performance
+        - minScore: 0.5
           aggregationMethod: median-run
       "categories:accessibility":
         - error
-        - minScore: $min_score_accessibility
+        - minScore: 0.5
           aggregationMethod: median-run
 EOF
 
@@ -248,5 +249,101 @@ module.exports = async (browser) => {
 };
 EOF
 
+log "Running lighthouse Step 1"
+
 step "Running Lighthouse CI"
 lhci autorun
+
+step "Opening the report file"
+cat /github/workspace/reports/manifest.json
+
+# Function to extract JSON data from the files and create the desired structure
+extract_json_data() {
+    # Read the manifest.json file and extract its content
+    manifest=$(cat /github/workspace/reports/manifest.json)
+
+    # Get the event name or action URL
+    if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+        event_info="Pull Request Link: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/pull/$GITHUB_EVENT_NUMBER"
+    else
+        event_info="Event Name: $GITHUB_EVENT_NAME, Action URL: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+    fi
+
+    # Initialize an array to store the data
+    data_array=()
+
+    # Loop through all the .json files in /github/workspace/reports/ directory (excluding manifest.json)
+    for file in /github/workspace/reports/*.json; do
+        # Skip manifest.json
+        if [ "$(basename "$file")" == "manifest.json" ]; then
+            continue
+        fi
+
+        # Get the page type based on the filename
+        if [[ $file == *"collections"* ]]; then
+            page_type="Collection Page"
+        elif [[ $file == *"products"* ]]; then
+            page_type="Product Page"
+        else
+            page_type="Homepage"
+        fi
+
+        # Extract the JSON data from the file
+        json_data=$(cat "$file")
+
+        # Extract the required fields from the json_data
+	requestedUrl=$(echo "$json_data" | jq -r '.requestedUrl')
+	finalUrl=$(echo "$json_data" | jq -r '.finalUrl')
+ 	fcp=$(echo "$json_data" | jq -r '.audits."first-contentful-paint".displayValue')
+	lcp=$(echo "$json_data" | jq -r '.audits."largest-contentful-paint".displayValue')
+	tbt=$(echo "$json_data" | jq -r '.audits."total-blocking-time".displayValue')
+	cls=$(echo "$json_data" | jq -r '.audits."cumulative-layout-shift".displayValue')
+	si=$(echo "$json_data" | jq -r '.audits."speed-index".displayValue')
+	performance=$(echo "$manifest" | jq --arg finalUrl "$finalUrl" '.[] | select(.url == $finalUrl) | .summary.performance')
+
+
+        # Append the data to the array
+        data_array+=("{\"Page\": \"$page_type\", \"Requested Url\": \"$requestedUrl\", \"Performance\": $performance, \"First Contentful Paint\": \"$fcp\", \"Largest Contentful Paint\": \"$lcp\", \"Total Blocking Time\": \"$tbt\", \"Cumulative Layout Shift\": \"$cls\", \"Speed Index\": \"$si\"}")
+
+ 	# log "data_array: $data_array"
+    done
+
+    # Combine the data_array into a single JSON array
+    # echo "[${data_array[*]}]"
+    
+    # Join the elements of data_array with commas
+    joined_data=$(printf ",%s" "${data_array[@]}")
+    joined_data=${joined_data:1}  # Remove the leading comma
+	
+    # Create a valid JSON array
+    json_array="[$joined_data, {\"Event Info\": \"$event_info\"}]"
+    echo "$json_array"
+}
+
+
+step "Uploading the reports to sheets"
+
+# Function to upload data to Google Sheets using cURL
+upload_to_google_sheet() {
+    # Read JSON data from file
+    data=$(extract_json_data)
+
+    # log "data_to_send: $data"
+    
+    # Extract only the repository name from $GITHUB_REPOSITORY
+    repository_name=$(basename $GITHUB_REPOSITORY)
+    
+    # Create a JSON object with repository name and data
+    json_object="{ \"$repository_name\": $data }"
+
+    # Print the JSON object
+    log "Data to send: $json_object"
+
+    # data=$(cat /github/workspace/reports/manifest.json)
+    curl -X POST -H "Content-Type: application/json" -d "$json_object" "https://script.google.com/macros/s/AKfycbwJniKE3kalCPI4p4kZ_NGMe04tPNbYd7PWxIMBcvm6bdNVf4C6cAbLgOK_vKCipJ0l/exec"
+}
+
+ls /github/workspace/reports/
+
+# Call the function to upload data to Google Sheet
+upload_to_google_sheet
