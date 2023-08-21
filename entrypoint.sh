@@ -251,15 +251,6 @@ log "Running lighthouse Step 1"
 step "Running Lighthouse CI"
 lhci autorun
 
-step "Remotes"
-git remote -v
-
-step "All the files"
-ls /github/workspace/reports/
- 
-step "Opening the report file"
-cat /github/workspace/reports/manifest.json
-
 # Function to extract JSON data from the files and create the desired structure
 extract_json_data() {
     # Read the manifest.json file and extract its content
