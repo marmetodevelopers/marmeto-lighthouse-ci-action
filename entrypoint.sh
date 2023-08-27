@@ -292,11 +292,11 @@ extract_json_data() {
         # Extract the required fields from the json_data
 	requestedUrl=$(echo "$json_data" | jq -r '.requestedUrl')
 	finalUrl=$(echo "$json_data" | jq -r '.finalUrl')
- 	fcp=$(echo "$json_data" | jq -r '.audits."first-contentful-paint".displayValue')
-	lcp=$(echo "$json_data" | jq -r '.audits."largest-contentful-paint".displayValue')
-	tbt=$(echo "$json_data" | jq -r '.audits."total-blocking-time".displayValue')
-	cls=$(echo "$json_data" | jq -r '.audits."cumulative-layout-shift".displayValue')
-	si=$(echo "$json_data" | jq -r '.audits."speed-index".displayValue')
+ 	fcp=$(echo "$json_data" | jq -r '.audits."first-contentful-paint".numericValue')
+	lcp=$(echo "$json_data" | jq -r '.audits."largest-contentful-paint".numericValue')
+	tbt=$(echo "$json_data" | jq -r '.audits."total-blocking-time".numericValue')
+	cls=$(echo "$json_data" | jq -r '.audits."cumulative-layout-shift".numericValue')
+	si=$(echo "$json_data" | jq -r '.audits."speed-index".numericValue')
 	# performance=$(echo "$manifest" | jq --arg finalUrl "$finalUrl" '.[] | select(.url == $finalUrl) | .summary.performance')
 
 	# Extract the filename from the path
