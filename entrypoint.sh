@@ -190,7 +190,7 @@ export LHCI_BUILD_CONTEXT__CURRENT_HASH="$GITHUB_SHA"
 cat <<- EOF > lighthouserc.yml
 ci:
   collect:
-    numberOfRuns: 1
+    numberOfRuns: 3
     url:
       - "$host/$query_string"
       - "$host/products/$product_handle$query_string"
