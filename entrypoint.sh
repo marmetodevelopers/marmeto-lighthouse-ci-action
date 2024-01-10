@@ -190,7 +190,7 @@ export LHCI_BUILD_CONTEXT__CURRENT_HASH="$GITHUB_SHA"
 cat <<- EOF > lighthouserc.yml
 ci:
   collect:
-    numberOfRuns: 3
+    numberOfRuns: 1
     url:
       - "$host/$query_string"
       - "$host/products/$product_handle$query_string"
@@ -241,6 +241,9 @@ log "Running lighthouse Step 1"
 
 step "Running Lighthouse CI"
 lhci autorun
+
+# Add an exception for the directory in Git
+git config --global --add safe.directory /github/workspace
 
 # Function to extract JSON data from the files and create the desired structure
 extract_json_data() {
