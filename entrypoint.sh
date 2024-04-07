@@ -240,22 +240,7 @@ EOF
 log "Running lighthouse Step 1"
 
 step "Running Lighthouse CI"
-# Define a function to run lhci autorun
-run_lhci_autorun() {
-  # Attempt to run lhci autorun
-  lhci autorun || true
-}
-
-# Use trap to catch any errors and handle them
-trap 'handle_error' ERR
-
-# Define a function to handle errors
-handle_error() {
-  log "Lighthouse CI run failed. Continuing script execution..."
-}
-
-# Run lhci autorun within the try-catch block
-run_lhci_autorun
+lhci autorun
 
 # Add an exception for the directory in Git
 git config --global --add safe.directory /github/workspace
